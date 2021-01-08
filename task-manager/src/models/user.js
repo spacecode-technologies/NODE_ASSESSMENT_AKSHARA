@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const validator = require('validator')
 const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 
 const addressSchema = new mongoose.Schema({
     state:{
@@ -28,6 +29,7 @@ const companySchema = new mongoose.Schema({
     },
     workEmail: {
         type: String,
+        unique: true,
         required: true,
         trim: true,
         lowercase: true,
@@ -62,6 +64,7 @@ const userSchema = new mongoose.Schema({
     },
     email: {
         type: String,
+        unique: true,
         required: true,
         trim: true,
         lowercase: true,
@@ -83,7 +86,13 @@ const userSchema = new mongoose.Schema({
         }
     },
     address: [addressSchema],
-    company: [companySchema]
+    company: [companySchema],
+    tokens: [{
+        token:{
+            type: String,
+            require: true
+        }
+    }]
     // age: {
     //     type: Number,
     //     default: 0,
@@ -95,6 +104,33 @@ const userSchema = new mongoose.Schema({
     // }
 })
 
+userSchema.methods.generateAuthToken = async function(){
+    const user = this
+    const token = jwt.sign({ _id: user._id.toString() }, 'thisismysecretkey')
+
+    user.tokens = user.tokens.concat({ token })
+    await user.save()
+
+    return token
+}
+
+userSchema.statics.findByCredentials = async(email, password)=>{
+    const user = await User.findOne({email})
+
+    if(!user){
+        throw new Error('Unable to login')
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password)
+
+    if(!isMatch){
+        throw new Error('Unable to login')
+    }
+
+    return user
+}
+
+//Hashing
 userSchema.pre('save', async function (next) {
     const user = this
 

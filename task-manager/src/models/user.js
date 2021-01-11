@@ -85,6 +85,10 @@ const userSchema = new mongoose.Schema({
             }
         }
     },
+    role: {
+        type: String,
+        default: "member"
+    },
     address: [addressSchema],
     company: [companySchema],
     tokens: [{

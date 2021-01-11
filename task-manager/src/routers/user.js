@@ -2,6 +2,7 @@ const express = require('express')
 const User = require('../models/user')
 const auth = require('../middleware/auth')
 const router = new express.Router()
+const zipcodes = require('zipcodes')
 
 router.post('/users', async (req, res) => {
     const user = new User(req.body)
@@ -29,17 +30,28 @@ router.get('/users/me', auth, async (req, res) => {
     res.send(req.user)
 })
 
+router.get('/pincode/:zip', async(req, res)=>{
+    try{
+        var hills = zipcodes.lookup(req.params.zip)
+        res.send(hills)
+    }catch(e){
+        res.status(500).send()
+    }
+})
+
 router.get('/users/:id', async (req, res) => {
     const _id = req.params.id
 
     try {
         const user = await User.findById(_id)
 
-        if (!user) {
-            return res.status(404).send()
+        if (user.role === 'admin') {
+            const users = await User.find({})
+            res.send(users)
         }
-
-        res.send(user)
+        else{
+            res.send(user)
+        }
     } catch (e) {
         res.status(500).send()
     }

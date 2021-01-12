@@ -3,6 +3,9 @@ const User = require('../models/user')
 const auth = require('../middleware/auth')
 const router = new express.Router()
 const zipcodes = require('zipcodes')
+const ExcelJs = require('exceljs')
+
+//const pincodeDirectory = require('indian-pincode-database')
 
 router.post('/users', async (req, res) => {
     const user = new User(req.body)
@@ -33,6 +36,7 @@ router.get('/users/me', auth, async (req, res) => {
 router.get('/pincode/:zip', async(req, res)=>{
     try{
         var hills = zipcodes.lookup(req.params.zip)
+        //var hills = pincodeDirectory.lookup(req.params.zip)
         res.send(hills)
     }catch(e){
         res.status(500).send()
@@ -95,5 +99,39 @@ router.delete('/users/:id', async (req, res) => {
         res.status(500).send()
     }
 })
+
+router.get('/sheet', async (req, res, next) => {
+    try {
+        const users = await User.find({});
+        const workbook = new ExcelJs.Workbook();
+        const worksheet = workbook.addWorksheet('users');
+        worksheet.columns = [
+            {header: 'Name', key: 'name', width: 10},
+            {header: 'Email', key: 'email', width: 10},
+            {header: 'Password', key: 'password', width: 10},
+            {header: 'Role', key: 'role', width: 10},
+            {header: 'Address', key: 'address', width: 50},
+            {header: 'Company', key: 'company', width: 10},
+        ];
+        worksheet.addRows(users);
+
+        res.setHeader(
+            "Content-Type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+            "Content-Disposition",
+            "attachment; filename=" + "users.xlsx"
+        );
+        worksheet.getRow(1).eachCell((cell) => {
+            cell.font = {bold: true};
+        });
+        return workbook.xlsx.write(res).then(function () {
+            res.status(200).end();
+        });
+    } catch (e) {
+        res.status(500).send(e);
+    }
+});
 
 module.exports = router

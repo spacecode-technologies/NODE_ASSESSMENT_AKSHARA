@@ -35,3 +35,5 @@ const myFunction = async () => {
 }
 
 myFunction()
+
+module.exports = app;
